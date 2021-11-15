@@ -14,12 +14,13 @@ end
 
 function PluginTargets.interval(seconds)
     return setmetatable(
-        {seconds = seconds, last_update = -1},
+        {seconds = seconds, next_update = -1, week = 0},
         {
             __call = function(t)
                 local current_time = GetCurrentTime()
-                if t.last_update == -1 or t.last_update + t.seconds < current_time then
-                    t.last_update = current_time
+                if t.next_update == -1 or current_time >= t.next_update then
+                    t.week = t.week + 1
+                    t.next_update = t.week * 40
                     return true
                 end
 
