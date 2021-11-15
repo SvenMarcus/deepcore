@@ -20,7 +20,7 @@ function PluginTargets.interval(seconds)
                 local current_time = GetCurrentTime()
                 if t.next_update == -1 or current_time >= t.next_update then
                     t.cycle = t.cycle + 1
-                    t.next_update = t.cycle * seconds
+                    t.next_update = t.cycle * t.seconds
                     return true
                 end
 
