@@ -21,6 +21,9 @@ local function setup_thread_globals()
     end
 
     function thread_mt.__index.Is_Thread_Active(id)
+        if id == nil then
+            error("No id given")
+        end
         return alive_threads[id] ~= nil
     end
 

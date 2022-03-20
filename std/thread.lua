@@ -26,6 +26,9 @@ function DeepCoreThread:start()
 end
 
 function DeepCoreThread:is_alive()
+    if self._thread_id == nil then
+        return false
+    end
     return Thread.Is_Thread_Active(self._thread_id)
 end
 
