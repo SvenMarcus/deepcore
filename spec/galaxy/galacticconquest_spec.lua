@@ -97,6 +97,11 @@ describe("GalacticConquest", function()
                 assert.are.equal(2, number_old_owner_planets)
                 assert.are.equal(1, number_new_owner_planets)
             end)
+
+            -- it("stores the timeline", function()
+            --     local planet_a = galactic_conquest.Planets["PlanetA"]
+            --     local actual = planet_a:last_owner_change()
+            -- end)
         end)
     end)
 end)
