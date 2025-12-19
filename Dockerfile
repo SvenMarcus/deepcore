@@ -1,7 +1,14 @@
-FROM nickblah/lua:5.1-luarocks-buster
+FROM alpine:3.22.1
 
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --assume-yes build-essential git && \
-    luarocks install busted
+RUN apk add --no-cache \
+    bash \
+    build-base \
+    git \
+    lua5.1-dev \
+    luarocks5.1 \
+    libc6-compat 
+
+RUN ln -s /usr/bin/luarocks-5.1 /usr/bin/luarocks
+RUN luarocks install busted
 
 CMD [ "/bin/bash" ]
