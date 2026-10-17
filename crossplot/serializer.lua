@@ -22,61 +22,63 @@ function serializer:deserialize(str)
     return loadstring(str)()
 end
 
-function serializer:serialize(tab, nested)
-    local result = ""
-    if nested then
-        result = result .. "{"
-    else
-        result = result .. "return {"
+---Serializes a Crossplot payload for shared storage.
+---@param value any Serializable primitive or acyclic plain table to encode
+---@return string? serialized Lua source, or nil when the value is unsupported
+function serializer:serialize(value)
+    -- Only plain values and tables can safely pass between game scripts.
+    local serialized = self:_serializeValue(value, {})
+    if serialized then
+        return "return " .. serialized
     end
-
-    if type(tab) ~= "table" then
-        return "return "..serializer:_serializeValue(tab)
-    end
-
-    local hasEntries = false
-    for k, v in pairs(tab) do
-        hasEntries = true
-        result = result .. self:_serializeKey(k) .. self:_serializeValue(v) .. ","
-    end
-
-    if not hasEntries then
-        result = result .. "}"
-        return result
-    end
-
-    result = string.sub(result, 1, -2)
-    result = result .. "}"
-    return result
 end
 
 function serializer:_serializeKey(value)
-    local result = ""
-    if type(value) == "table" then
-        result = self:serialize(value, true)
-    elseif type(value) == "function" then
-        result = string.format("loadstring(%q)", string.dump(value))
-    elseif type(value) == "string" then
-        result = value
+    local value_type = type(value)
+    if value_type == "string" then
+        return "[" .. string.format("%q", value) .. "]="
+    elseif value_type == "boolean" then
+        return "[" .. tostring(value) .. "]="
+    elseif value_type == "number" then
+        local serialized = tostring(value)
+        if tonumber(serialized) == value then
+            return "[" .. serialized .. "]="
+        end
     end
-
-    if type(value) ~= "number" then
-        result = result .. "="
-    end
-    return result
 end
 
-function serializer:_serializeValue(value)
-    local result = ""
-    if type(value) == "table" then
-        result = self:serialize(value, true)
-    elseif type(value) == "function" then
-        result = string.format("loadstring(%q)", string.dump(value))
-    elseif type(value) == "string" then
-        result = '"' .. value .. '"'
-    else
-        result = tostring(value)
+---@private
+---@param value any Primitive or table value currently being encoded
+---@param ancestors table<table, boolean> Tables on the current traversal path, used to detect cycles
+---@return string? serialized Encoded value, or nil when the value is unsupported
+function serializer:_serializeValue(value, ancestors)
+    local value_type = type(value)
+    if value_type == "nil" or value_type == "boolean" then
+        return tostring(value)
+    elseif value_type == "string" then
+        return string.format("%q", value)
+    elseif value_type == "number" then
+        local serialized = tostring(value)
+        if tonumber(serialized) == value then
+            return serialized
+        end
+        return nil
+    elseif value_type ~= "table" or ancestors[value] then
+        return nil
     end
 
-    return result
+    ancestors[value] = true
+    local entries = {}
+    for key, entry in pairs(value) do
+        local serialized_key = self:_serializeKey(key)
+        local serialized_entry = self:_serializeValue(entry, ancestors)
+        if not serialized_key or not serialized_entry then
+            ancestors[value] = nil
+            return nil
+        end
+        table.insert(entries, serialized_key .. serialized_entry)
+    end
+    ancestors[value] = nil
+
+    return "{" .. table.concat(entries, ",") .. "}"
 end
