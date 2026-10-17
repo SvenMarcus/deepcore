@@ -47,8 +47,17 @@ function Observable:detach_listener(listener, optional_context)
     end
 end
 
+---Checks whether this observable currently has any listeners.
+---@return boolean has_listeners Whether at least one listener is attached
+function Observable:has_listeners()
+    return table.getn(self.Listeners) > 0
+end
+
 function Observable:notify(...)
-    for _, tab in ipairs(self.Listeners) do
+    -- Use a copy so callbacks can safely remove themselves.
+    local listeners = {unpack(self.Listeners)}
+
+    for _, tab in ipairs(listeners) do
         local listener = tab.Listener
         if tab.Arg then
             listener(tab.Arg, unpack(arg))
