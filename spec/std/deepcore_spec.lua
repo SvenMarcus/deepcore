@@ -76,6 +76,21 @@ describe("DeepCore", function()
             }
 
             assert.spy(_G.crossplot.galactic).was.called()
+            assert.are.equal("galactic-core", _G.crossplot.__instance.initial_route_source)
+        end)
+
+        it("should submit the plugin's initial routes after loading", function()
+            require("deepcore/crossplot/crossplot")
+            spy.on(_G.crossplot, "submit_initial_routes")
+
+            deepcore:galactic {
+                plugins = {},
+                plugin_folder = "spec/test-plugins",
+                context = {}
+            }
+
+            assert.spy(_G.crossplot.submit_initial_routes).was.called()
+            assert.is_true(_G.crossplot.__instance.initial_routes_submitted)
         end)
 
         it("should add galactic conquest instance to context", function()
