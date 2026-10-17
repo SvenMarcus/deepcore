@@ -36,7 +36,8 @@ function PluginLoader:load(plugin_list)
     end
     local unresolved_plugins = {}
 
-    for _, plugin_name in pairs(plugin_list) do
+    -- Plugin lists are ordered, so keep the order chosen by the author.
+    for _, plugin_name in ipairs(plugin_list) do
         self:load_plugin(plugin_name, unresolved_plugins)
     end
 
@@ -67,7 +68,8 @@ function PluginLoader:load_plugin(plugin_name, unresolved_plugins)
 
     local loaded_dependencies = {}
     if plugin_def.dependencies and table.getn(plugin_def.dependencies) > 0 then
-        for _, dependency in pairs(plugin_def.dependencies) do
+        -- This order also decides which dependency fills each argument.
+        for _, dependency in ipairs(plugin_def.dependencies) do
             if not self.loaded_plugins[dependency] then
                 self:load_plugin(dependency, unresolved_plugins)
             end

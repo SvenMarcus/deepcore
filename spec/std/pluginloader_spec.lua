@@ -17,6 +17,7 @@ describe("PluginLoader", function()
     after_each(function()
         eaw_env.teardown_environment()
         require_utilities.reset_require()
+        package.loaded["spec/test-plugins/ordered-dependencies/init"] = nil
     end)
 
     local function assert_loaded_plugin_stub(plugin)
@@ -45,6 +46,47 @@ describe("PluginLoader", function()
                 assert.are.equal("THE_TARGET", container.target())
                 assert_loaded_plugin_stub(container.plugin)
             end)
+        end)
+    end)
+
+    describe("When loading plugin arrays", function()
+        it("should load only array entries in order", function()
+            local loaded = {}
+            plugin_loader.load_plugin = function(self, plugin_name)
+                table.insert(loaded, plugin_name)
+            end
+
+            plugin_loader:load {
+                "first",
+                "second",
+                metadata = "not-a-plugin"
+            }
+
+            assert.are.same({"first", "second"}, loaded)
+        end)
+
+        it("should pass only dependency array entries in order", function()
+            local first = {name = "first"}
+            local second = {name = "second"}
+            plugin_loader.loaded_plugins.first = first
+            plugin_loader.loaded_plugins.second = second
+            plugin_loader.loaded_plugins["not-a-dependency"] = {name = "ignored"}
+
+            package.loaded["spec/test-plugins/ordered-dependencies/init"] = {
+                dependencies = {
+                    "first",
+                    "second",
+                    metadata = "not-a-dependency"
+                },
+                init = function(self, ctx, ...)
+                    return {dependencies = arg}
+                end
+            }
+
+            plugin_loader:load_plugin("ordered-dependencies", {})
+
+            assert.are.same({first, second, n = 2},
+                plugin_loader.loaded_plugins["ordered-dependencies"].dependencies)
         end)
     end)
 
