@@ -29,9 +29,19 @@ describe("MessageQueue", function()
     describe("When queueing message", function()
         it("should save message in Key Value Store", function()
             mq:queue_value("key", "value")
+            assert.are.equal("string", type(mq.global_values.key:peek()))
             mq:process()
 
             assert.are.equal("value", fake_kvstore:get("key"))
+        end)
+
+        it("should reject unsupported values before queueing them", function()
+            assert.is_false(mq:queue_value("key", io.stdout))
+
+            mq:process()
+
+            assert.is_nil(fake_kvstore:get("key"))
+            assert.is_nil(mq.global_values.key)
         end)
 
         describe("but key is already set", function()
@@ -40,18 +50,28 @@ describe("MessageQueue", function()
             end)
             
             it("should not store key again", function()
-                local store_spy = spy.on(fake_kvstore, "store")
+                local store_spy = spy.on(fake_kvstore, "store_serialized")
                 
                 mq:queue_value("key", "value")
                 mq:process()
 
                 assert.spy(store_spy).was.not_called()
             end)
+
+            it("should not deserialize an occupied mailbox", function()
+                local get_spy = spy.on(fake_kvstore, "get")
+
+                mq:queue_value("key", "value")
+                mq:process()
+
+                assert.spy(get_spy).was.not_called()
+            end)
         end)
 
         describe("after message processed", function()
             it("should not be processed again", function()
-                local store_spy = spy.on(fake_kvstore, "store")
+                local store_spy = spy.on(fake_kvstore, "store_serialized")
+                local is_empty_spy = spy.on(fake_kvstore, "is_empty")
                 mq:queue_value("key", "value")
                 
                 mq:process()
@@ -60,6 +80,7 @@ describe("MessageQueue", function()
                 mq:process()
 
                 assert.spy(store_spy).was.called(1)
+                assert.spy(is_empty_spy).was.called(1)
             end)
         end)
     end)

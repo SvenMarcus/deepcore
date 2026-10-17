@@ -55,6 +55,35 @@ describe("GlobalValueKeyValueStore", function()
             assert.are.same(value, actual)
         end)
 
+        it("should preserve escaped strings and non-identifier keys", function()
+            local kv_store = GlobalValueKeyValueStore()
+            local value = {
+                ['key with spaces'] = 'quotes " and a\nnewline',
+                [true] = false
+            }
+
+            assert.is_true(kv_store:store("key", value))
+            assert.are.same(value, kv_store:get("key"))
+        end)
+
+        it("should reject native values, functions, and cycles", function()
+            local kv_store = GlobalValueKeyValueStore()
+            local cycle = {}
+            cycle.self = cycle
+            local cases = {
+                io.stdout,
+                function() end,
+                {nested = io.stdout},
+                cycle
+            }
+
+            for _, value in ipairs(cases) do
+                GlobalValue.Set("key", "")
+                assert.is_false(kv_store:store("key", value))
+                assert.are.equal("", GlobalValue.Get("key"))
+            end
+        end)
+
         describe("then retrieving it", function()
             it("should return stored value", function()
                 local kv_store = GlobalValueKeyValueStore()
@@ -75,6 +104,27 @@ describe("GlobalValueKeyValueStore", function()
             kv_store:free("key")
 
             assert.are.equal("", GlobalValue.Get("key"))
+        end)
+    end)
+
+    describe("When taking a mailbox value", function()
+        it("should clear serializable contents", function()
+            local kv_store = GlobalValueKeyValueStore()
+            local cases = {
+                {serialized = 'return "value"', expected = "value"},
+                {serialized = "return false", expected = false},
+                {serialized = "return nil", expected = nil}
+            }
+
+            for _, case in ipairs(cases) do
+                GlobalValue.Set("key", case.serialized)
+                assert.is_false(kv_store:is_empty("key"))
+                local value = kv_store:take("key")
+
+                assert.are.same(case.expected, value)
+                assert.are.equal("", GlobalValue.Get("key"))
+                assert.is_true(kv_store:is_empty("key"))
+            end
         end)
     end)
 

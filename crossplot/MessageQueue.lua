@@ -18,6 +18,7 @@
 
 require("deepcore/std/class")
 require("deepcore/std/Queue")
+require("deepcore/crossplot/serializer")
 
 ---@class MessageQueue
 MessageQueue = class()
@@ -32,31 +33,48 @@ function MessageQueue:new(kv_store)
     self.kv_store = kv_store
 end
 
----@param key string
----@param value string
+---@param key string Shared mailbox key that will receive the message
+---@param value any Serializable Crossplot payload to prepare and queue
+---@return boolean
 function MessageQueue:queue_value(key, value)
+    -- Convert now so queued messages contain only safe, portable data.
+    local serialized = serializer:serialize(value)
+    if not serialized then
+        return false
+    end
+
+    return self:queue_serialized(key, serialized)
+end
+
+---Queues a message that has already been prepared for shared storage.
+---@private
+---@param key string Destination key
+---@param serialized string Prepared message
+---@return boolean queued Whether the message was queued
+function MessageQueue:queue_serialized(key, serialized)
     if not self.global_values[key] then
         self.global_values[key] = Queue()
     end
 
-    self.global_values[key]:add(value)
+    self.global_values[key]:add(serialized)
+    return true
 end
 
 function MessageQueue:process()
     DebugMessage("In MessageQueue:process()")
     for key, queue in pairs(self.global_values) do
-        if self:can_send(key) and queue.size > 0 then
-            local value = queue:remove()
-            DebugMessage("Sending Key-Value Pair with key %s and value %s", tostring(key), tostring(value))
-            self.kv_store:store(key, value)
+        -- Leave later messages queued until the shared slot is free.
+        if queue.size > 0 and self:can_send(key) then
+            local serialized = queue:remove()
+            DebugMessage("Sending Key-Value Pair with key %s", tostring(key))
+            self.kv_store:store_serialized(key, serialized)
         end
     end
 end
 
 ---@private
 function MessageQueue:can_send(key)
-    local value = self.kv_store:get(key)
-    return not value or value == ""
+    return self.kv_store:is_empty(key)
 end
 
 return MessageQueue
