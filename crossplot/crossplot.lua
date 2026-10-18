@@ -30,18 +30,29 @@ function crossplot:main()
 	end
 
 	DebugMessage("%s -- initializing MainKeyValueStoreBasedEventBus", tostring(Script))
-	self.__instance = MainKeyValueStoreBasedEventBus(GlobalValueKeyValueStore())
+	self.__instance = MainKeyValueStoreBasedEventBus(GlobalValueKeyValueStore(), true)
 end
 
 ---Initialize crossplot for the galactic plot
-function crossplot:galactic()
+---@param initial_route_source? string Startup listener group represented by this galactic plot; omit for immediate route registration
+function crossplot:galactic(initial_route_source)
 	if self.__instance then
 		error("crossplot has already been initialized in this plot")
 		return
 	end
 
 	DebugMessage("%s -- initializing KeyValueStoreBasedEventBus", tostring(Script))
-	self.__instance = KeyValueStoreBasedEventBus(tostring(Script), GlobalValueKeyValueStore())
+	self.__instance = KeyValueStoreBasedEventBus(tostring(Script), GlobalValueKeyValueStore(), initial_route_source)
+end
+
+---Announces that startup listener setup is complete.
+---@param required_initial_route_sources? string[] Listener groups that must finish before startup messages are delivered
+---@return boolean queued Whether the listener list was queued
+function crossplot:submit_initial_routes(required_initial_route_sources)
+	if not self.__instance or not self.__instance.submit_initial_routes then
+		return false
+	end
+	return self.__instance:submit_initial_routes(required_initial_route_sources)
 end
 
 ---Initialize crossplot on a tactical plot

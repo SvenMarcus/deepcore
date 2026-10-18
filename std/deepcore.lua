@@ -5,6 +5,7 @@ require("deepcore/galaxy/GalacticConquest")
 
 deepcore = {}
 
+---@param config table Galactic DeepCore configuration, including optional required_initial_route_sources startup listener group names
 function deepcore:galactic(config)
     if not config.plugin_folder then
         error("Missing mandatory setting plugin_folder")
@@ -12,9 +13,11 @@ function deepcore:galactic(config)
 
     local context = config.context or {}
     local plugin_loader = PluginLoader(context, config.plugin_folder)
-    crossplot:galactic()
+    crossplot:galactic("galactic-core")
     context.galactic_conquest = GalacticConquest(config.planet_factory)
     plugin_loader:load(config.plugins)
+    -- Announce the complete listener list only after every plugin is loaded.
+    crossplot:submit_initial_routes(config.required_initial_route_sources or {"galactic-core"})
 
     return {
         planets = context.galactic_conquest.Planets,
