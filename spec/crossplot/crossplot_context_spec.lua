@@ -40,8 +40,8 @@ describe("CrossplotContext", function()
 	end
 
 	it("a context with ready condition publishes an event", function()
-		local main_bus = MainKeyValueStoreBasedEventBus(GlobalValueKeyValueStore())
-		local receiving_message_bus = KeyValueStoreBasedEventBus("receiver", GlobalValueKeyValueStore())
+		local main_bus = MainKeyValueStoreBasedEventBus(Mailbox(GlobalValueKeyValueStore()))
+		local receiving_message_bus = KeyValueStoreBasedEventBus("receiver", Mailbox(GlobalValueKeyValueStore()))
 		local context = crossplot:acquire_context(function()
 			return true
 		end)
@@ -59,8 +59,8 @@ describe("CrossplotContext", function()
 	end)
 
 	it("a context with not ready condition does not publish events", function()
-		local main_bus = MainKeyValueStoreBasedEventBus(GlobalValueKeyValueStore())
-		local receiving_message_bus = KeyValueStoreBasedEventBus("receiver", GlobalValueKeyValueStore())
+		local main_bus = MainKeyValueStoreBasedEventBus(Mailbox(GlobalValueKeyValueStore()))
+		local receiving_message_bus = KeyValueStoreBasedEventBus("receiver", Mailbox(GlobalValueKeyValueStore()))
 		local context = crossplot:acquire_context(function()
 			return false
 		end)
@@ -78,8 +78,8 @@ describe("CrossplotContext", function()
 	end)
 
 	it("can subscribe to events from a context", function()
-		local main_bus = MainKeyValueStoreBasedEventBus(GlobalValueKeyValueStore())
-		local sending_bus = KeyValueStoreBasedEventBus("sender", GlobalValueKeyValueStore())
+		local main_bus = MainKeyValueStoreBasedEventBus(Mailbox(GlobalValueKeyValueStore()))
+		local sending_bus = KeyValueStoreBasedEventBus("sender", Mailbox(GlobalValueKeyValueStore()))
 		local context = crossplot:acquire_context(function()
 			return true
 		end)

@@ -18,20 +18,17 @@
 
 require("deepcore/std/class")
 require("deepcore/std/Observable")
-require("deepcore/crossplot/MessageQueue")
+require("deepcore/crossplot/Mailbox")
 
 ---@class KeyValueStoreBasedEventBus
 KeyValueStoreBasedEventBus = class()
 
 ---@param name string
----@param kv_store GlobalValueKeyValueStore
-function KeyValueStoreBasedEventBus:new(name, kv_store)
+---@param mailbox Mailbox
+function KeyValueStoreBasedEventBus:new(name, mailbox)
 	self.name = (name or tostring(Script))
 
-	self.kv_store = kv_store
-
-	---@type MessageQueue
-	self.message_queue = MessageQueue(kv_store)
+	self.mailbox = mailbox
 	self.subscribers = {}
 end
 
@@ -50,7 +47,7 @@ function KeyValueStoreBasedEventBus:subscribe(event_name, listener_function, opt
 
 	self.subscribers[event_name]:attach_listener(listener_function, optional_self)
 
-	self.message_queue:queue_value("busid:main:subscribe", subscription)
+	self.mailbox:send("busid:main:subscribe", subscription)
 	DebugMessage("Registered listener for %s", event_name)
 end
 
@@ -71,14 +68,14 @@ function KeyValueStoreBasedEventBus:unsubscribe(event_name, listener_function, o
 		event = event_name,
 	}
 
-	self.message_queue:queue_value("busid:main:unsubscribe", unsub)
+	self.mailbox:send("busid:main:unsubscribe", unsub)
 	DebugMessage("Sent unsubscribe message for %s to master", event_name)
 end
 
 ---@param event_name string
 ---@param ... any
 function KeyValueStoreBasedEventBus:publish(event_name, ...)
-	self.message_queue:queue_value("busid:main:publish", {
+	self.mailbox:send("busid:main:publish", {
 		event_name = event_name,
 		args = arg,
 	})
@@ -86,9 +83,9 @@ end
 
 ---@private
 function KeyValueStoreBasedEventBus:process_notifications()
-	local notification = self.kv_store:get("busid:" .. self.name .. ":notify")
+	local notification = self.mailbox:receive("busid:" .. self.name .. ":notify")
 
-	if not notification or notification == "" then
+	if type(notification) ~= "table" then
 		return
 	end
 
@@ -102,18 +99,18 @@ function KeyValueStoreBasedEventBus:process_notifications()
 
 	subscribers:notify(unpack(args))
 
-	self.kv_store:free("busid:" .. self.name .. ":notify")
 end
 
 function KeyValueStoreBasedEventBus:update()
 	self:process_notifications()
-	self.message_queue:process()
+	self.mailbox:process()
 end
 
 ---@class MainKeyValueStoreBasedEventBus
 MainKeyValueStoreBasedEventBus = class()
 
-function MainKeyValueStoreBasedEventBus:new(kv_store)
+---@param mailbox Mailbox
+function MainKeyValueStoreBasedEventBus:new(mailbox)
 	self.name = "busid:main"
 
 	---@type table<string, string[]>
@@ -122,13 +119,12 @@ function MainKeyValueStoreBasedEventBus:new(kv_store)
 	---@type table<string, table>
 	self.local_subscribers = {}
 
-	self.kv_store = kv_store
-	self.message_queue = MessageQueue(kv_store)
+	self.mailbox = mailbox
 end
 
 ---@private
 function MainKeyValueStoreBasedEventBus:process_subscriptions()
-	local subscriber = self.kv_store:get("busid:main:subscribe")
+	local subscriber = self.mailbox:receive("busid:main:subscribe")
 
 	if not subscriber or subscriber == "" then
 		return
@@ -153,12 +149,11 @@ function MainKeyValueStoreBasedEventBus:process_subscriptions()
 	end
 
 	table.insert(self.subscribers[subscriber.event], subscriber.name)
-	self.kv_store:free("busid:main:subscribe")
 end
 
 ---@private
 function MainKeyValueStoreBasedEventBus:process_unsubscriptions()
-	local unsubscriber = self.kv_store:get("busid:main:unsubscribe")
+	local unsubscriber = self.mailbox:receive("busid:main:unsubscribe")
 
 	if not unsubscriber or unsubscriber == "" then
 		return
@@ -188,7 +183,6 @@ function MainKeyValueStoreBasedEventBus:process_unsubscriptions()
 		table.remove(self.subscribers[unsubscriber.event], del_index)
 	end
 
-	self.kv_store:free("busid:main:unsubscribe")
 end
 
 ---@private
@@ -205,14 +199,13 @@ end
 
 ---@private
 function MainKeyValueStoreBasedEventBus:process_publish_messages()
-	local publish_data = self.kv_store:get("busid:main:publish")
+	local publish_data = self.mailbox:receive("busid:main:publish")
 
 	if not publish_data or publish_data == "" then
 		return
 	end
 
 	self:publish(publish_data.event_name, unpack(publish_data.args))
-	self.kv_store:free("busid:main:publish")
 end
 
 ---@param event_name string
@@ -245,7 +238,7 @@ function MainKeyValueStoreBasedEventBus:publish(event_name, ...)
 	end
 
 	for _, subscriber_name in pairs(subscribers) do
-		self.message_queue:queue_value("busid:" .. subscriber_name .. ":notify", {
+		self.mailbox:send("busid:" .. subscriber_name .. ":notify", {
 			event_name = event_name,
 			args = arg,
 		})
@@ -268,5 +261,5 @@ function MainKeyValueStoreBasedEventBus:update()
 	self:process_subscriptions()
 	self:process_unsubscriptions()
 	self:process_publish_messages()
-	self.message_queue:process()
+	self.mailbox:process()
 end
