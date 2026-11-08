@@ -17,6 +17,7 @@
 -- *****************************************************************************
 require("deepcore/crossplot/KeyValueStoreBasedEventBus")
 require("deepcore/crossplot/GlobalValueKeyValueStore")
+require("deepcore/crossplot/Mailbox")
 require("deepcore/crossplot/context")
 
 ---A module that allows publish-subscribe communication between different Lua script environments
@@ -30,7 +31,7 @@ function crossplot:main()
 	end
 
 	DebugMessage("%s -- initializing MainKeyValueStoreBasedEventBus", tostring(Script))
-	self.__instance = MainKeyValueStoreBasedEventBus(GlobalValueKeyValueStore())
+	self.__instance = MainKeyValueStoreBasedEventBus(Mailbox(GlobalValueKeyValueStore()))
 end
 
 ---Initialize crossplot for the galactic plot
@@ -41,7 +42,7 @@ function crossplot:galactic()
 	end
 
 	DebugMessage("%s -- initializing KeyValueStoreBasedEventBus", tostring(Script))
-	self.__instance = KeyValueStoreBasedEventBus(tostring(Script), GlobalValueKeyValueStore())
+	self.__instance = KeyValueStoreBasedEventBus(tostring(Script), Mailbox(GlobalValueKeyValueStore()))
 end
 
 ---Initialize crossplot on a tactical plot
@@ -52,7 +53,7 @@ function crossplot:tactical()
 	end
 
 	DebugMessage("%s -- initializing KeyValueStoreBasedEventBus", tostring(Script))
-	self.__instance = KeyValueStoreBasedEventBus("crossplot:tactical", GlobalValueKeyValueStore())
+	self.__instance = KeyValueStoreBasedEventBus("crossplot:tactical", Mailbox(GlobalValueKeyValueStore()))
 end
 
 ---Initialize crossplot for on a script attached to a game object
@@ -64,7 +65,7 @@ function crossplot:game_object()
 
 	DebugMessage("%s -- initializing KeyValueStoreBasedEventBus", tostring(Script))
 	local name = tostring(Object)
-	self.__instance = KeyValueStoreBasedEventBus(name, GlobalValueKeyValueStore())
+	self.__instance = KeyValueStoreBasedEventBus(name, Mailbox(GlobalValueKeyValueStore()))
 end
 
 ---Acquire a crossplot context with a ready condition

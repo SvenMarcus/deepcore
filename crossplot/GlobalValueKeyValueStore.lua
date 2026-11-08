@@ -1,23 +1,26 @@
 require("deepcore/std/class")
-require("deepcore/crossplot/serializer")
 
+---Raw text slots backed by GlobalValue. Knows nothing about what the text contains.
 ---@class GlobalValueKeyValueStore
 GlobalValueKeyValueStore = class()
 
 ---@param key string
----@param value any
-function GlobalValueKeyValueStore:store(key, value)
-    GlobalValue.Set(key, serializer:serialize(value))
+---@return string?
+function GlobalValueKeyValueStore:read(key)
+    return GlobalValue.Get(key)
 end
 
 ---@param key string
-function GlobalValueKeyValueStore:get(key)
-    local value = GlobalValue.Get(key)
-    if not value then
-        return nil
-    end
+---@param text string
+function GlobalValueKeyValueStore:write(key, text)
+    GlobalValue.Set(key, text)
+end
 
-    return serializer:deserialize(value)
+---@param key string
+---@return boolean
+function GlobalValueKeyValueStore:is_empty(key)
+    local text = GlobalValue.Get(key)
+    return text == nil or text == ""
 end
 
 ---@param key string

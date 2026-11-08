@@ -7,6 +7,7 @@ describe("crossplot MainKeyValueStoreBasedEventBus", function()
         require_utilities.replace_require()
         require("deepcore/crossplot/KeyValueStoreBasedEventBus")
         require("deepcore/crossplot/GlobalValueKeyValueStore")
+        require("deepcore/crossplot/Mailbox")
     end)
 
     after_each(function()
@@ -20,8 +21,8 @@ describe("crossplot MainKeyValueStoreBasedEventBus", function()
 
     describe("Given subscribed function", function()
         before_each(function()
-            main = MainKeyValueStoreBasedEventBus(GlobalValueKeyValueStore())
-            eventbus = KeyValueStoreBasedEventBus("eventbus", GlobalValueKeyValueStore())
+            main = MainKeyValueStoreBasedEventBus(Mailbox(GlobalValueKeyValueStore()))
+            eventbus = KeyValueStoreBasedEventBus("eventbus", Mailbox(GlobalValueKeyValueStore()))
 
             subscriber_func = spy.new(function() end)
             eventbus:subscribe("MY_EVENT", subscriber_func)
@@ -64,8 +65,8 @@ describe("crossplot MainKeyValueStoreBasedEventBus", function()
         local context
 
         before_each(function()
-            main = MainKeyValueStoreBasedEventBus(GlobalValueKeyValueStore())
-            eventbus = KeyValueStoreBasedEventBus("eventbus", GlobalValueKeyValueStore())
+            main = MainKeyValueStoreBasedEventBus(Mailbox(GlobalValueKeyValueStore()))
+            eventbus = KeyValueStoreBasedEventBus("eventbus", Mailbox(GlobalValueKeyValueStore()))
 
             context = {}
             subscriber_func = spy.new(function() end)
@@ -107,7 +108,7 @@ describe("crossplot MainKeyValueStoreBasedEventBus", function()
 
     describe("Given subscribed function on main", function()
         before_each(function()
-            main = MainKeyValueStoreBasedEventBus(GlobalValueKeyValueStore())
+            main = MainKeyValueStoreBasedEventBus(Mailbox(GlobalValueKeyValueStore()))
 
             subscriber_func = spy.new(function() end)
             main:subscribe("MY_EVENT", subscriber_func)

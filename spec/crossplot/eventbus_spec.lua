@@ -5,10 +5,11 @@ describe("Eventbus", function()
     local busid
     local eventbus
 
-    local fake_kvstore
+    local slots
+    local peer
 
     before_each(function()
-        local make_fake_kvstore = require("spec.crossplot.fake_kvstore")
+        local make_fake_slots = require("spec.crossplot.fake_slot_store")
 
         require_utilities = require("spec.require_utilities")
         require_utilities.replace_require()
@@ -19,15 +20,22 @@ describe("Eventbus", function()
         busid = "busid:".._G.Script
         
         require("deepcore/crossplot/KeyValueStoreBasedEventBus")
-        fake_kvstore = make_fake_kvstore()
-        eventbus = KeyValueStoreBasedEventBus(_G.Script, fake_kvstore)
+        require("deepcore/crossplot/Mailbox")
+        slots = make_fake_slots()
+        peer = Mailbox(slots)
+        eventbus = KeyValueStoreBasedEventBus(_G.Script, Mailbox(slots))
     end)
 
     after_each(function()
         require_utilities.reset_require()
         eaw_env.teardown_environment()
-        fake_kvstore:clear()
+        slots:clear()
     end)
+
+    local function deliver(key, value)
+        peer:send(key, value)
+        peer:process()
+    end
 
     describe("When subscribing to an event", function()
         it("should set the GlobalValue for the master event bus", function()
@@ -36,7 +44,7 @@ describe("Eventbus", function()
             
             eventbus:update()
 
-            local subscriber = fake_kvstore:get("busid:main:subscribe")
+            local subscriber = peer:receive("busid:main:subscribe")
             assert.are.equal(subscriber.name, Script)
             assert.are.equal(subscriber.event, "MY_EVENT")
         end)
@@ -47,7 +55,7 @@ describe("Eventbus", function()
             it("should call the callback function", function()
                 local func = spy.new(function() end)
                 eventbus:subscribe("MY_EVENT", func)
-                fake_kvstore:store(busid..":notify", { event_name = 'MY_EVENT', args = {4, 2} })
+                deliver(busid..":notify", { event_name = 'MY_EVENT', args = {4, 2} })
 
                 eventbus:update()
 
@@ -57,11 +65,11 @@ describe("Eventbus", function()
             it("should reset the GlobalValue", function()
                 local func = function() end
                 eventbus:subscribe("MY_EVENT", func)
-                fake_kvstore:store(busid..":notify", { event_name = 'MY_EVENT', args = {4, 2} })
+                deliver(busid..":notify", { event_name = 'MY_EVENT', args = {4, 2} })
 
                 eventbus:update()
 
-                assert.is_nil(fake_kvstore:get(busid..":notify"))
+                assert.is_true(slots:is_empty(busid..":notify"))
             end)
         end)
 
@@ -74,7 +82,7 @@ describe("Eventbus", function()
                 eventbus:unsubscribe("MY_EVENT", func)
                 eventbus:update()
 
-                local unsubscriber = fake_kvstore:get("busid:main:unsubscribe")
+                local unsubscriber = peer:receive("busid:main:unsubscribe")
                 assert.are.equal(unsubscriber.name, _G.Script)
                 assert.are.equal(unsubscriber.event, "MY_EVENT")
             end)
