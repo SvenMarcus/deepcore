@@ -2,6 +2,7 @@ require("deepcore/std/class")
 require("deepcore/statemachine/transition-policies/DeepCoreTimedTransitionPolicy")
 require("deepcore/statemachine/transition-policies/DeepCoreTechLevelTransitionPolicy")
 require("deepcore/statemachine/transition-policies/DeepCoreHeroDeathTransitionPolicy")
+require("deepcore/statemachine/transition-policies/DeepCoreCrossplotTransitionPolicy")
 require("deepcore/statemachine/transition-policies/DeepCorePlanetOwnerChangedTransitionPolicy")
 require("deepcore/statemachine/transition-policies/DeepCoreObjectConstructionTransitionPolicy")
 
@@ -28,6 +29,11 @@ function TransitionPolicyFactory:hero_dies(hero_type_name)
     ---@type GalacticConquest
     local gc = self.ctx.galactic_conquest
     return DeepCoreHeroDeathTransitionPolicy(gc.Events.GalacticHeroKilled, hero_type_name)
+end
+
+---@param trigger_identifier string
+function TransitionPolicyFactory:crossplot_trigger(trigger_identifier)
+    return DeepCoreCrossplotTransitionPolicy(trigger_identifier)
 end
 
 ---@param planet_name string
